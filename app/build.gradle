@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.wardakbaba.webview'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.wardakbaba.webview"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+
+    signingConfigs {
+        release {
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
+            def ksPass = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            def keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+            def keyPass = System.getenv("ANDROID_KEY_PASSWORD")
+            if (ksPath && ksPass && keyAlias && keyPass) {
+                storeFile file(ksPath)
+                storePassword ksPass
+                keyAlias keyAlias
+                keyPassword keyPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['/META-INF/{AL2.0,LGPL2.1}']
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.activity:activity:1.9.2'
+    implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+}

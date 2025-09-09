@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Wardak Baba</string>
+    <string name="base_url">https://app.wardakbaba.com</string>
+    <string name="offline_title">بدون اینترنت</string>
+    <string name="offline_message">اتصال اینترنت برقرار نیست. لطفاً بعداً دوباره تلاش کنید.</string>
+    <string name="downloading">در حال دانلود فایل…</string>
+</resources>
