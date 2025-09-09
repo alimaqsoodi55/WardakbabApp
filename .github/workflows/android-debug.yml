@@ -7,50 +7,36 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      ANDROID_HOME: /usr/local/lib/android/sdk
+
+    # بیلد داخل کانتینر با SDK آماده
+    container:
+      image: ghcr.io/cirruslabs/android-sdk:34
+      options: --user root
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Point Gradle to SDK
-        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-
-      # اگر sdkmanager نباشه، cmdline-tools رو دانلود و نصب می‌کنیم
-      - name: Ensure sdkmanager exists
-        shell: bash
+      # نصب جاوا 17 داخل کانتینر
+      - name: Install JDK 17
         run: |
-          set -e
-          SDKBIN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -x "$SDKBIN" ]; then
-            mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-            cd "$ANDROID_SDK_ROOT/cmdline-tools"
-            curl -s -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-            unzip -q -o cmdline-tools.zip
-            rm cmdline-tools.zip
-            mv cmdline-tools latest || true
-          fi
+          apt-get update
+          apt-get install -y openjdk-17-jdk unzip curl
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV
 
-      # پذیرش لایسنس‌ها و نصب پکیج‌ها
-      - name: Accept licenses & install SDK packages
-        shell: bash
+      # قبول لایسنس‌ها و نصب پکیج‌های لازم (اگر نبود)
+      - name: Accept licenses & ensure SDK packages
         run: |
-          set -e
-          SDKBIN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKBIN" --licenses
-          "$SDKBIN" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      # این بخش در عکسِ تو خالی مونده بود — باید دقیقاً همین‌ها باشد
+      # اعلام مسیر SDK به Gradle
+      - name: Create local.properties
+        run: echo "sdk.dir=/sdk" > local.properties
+
+      # اگر gradlew نباشد، Wrapper بساز
       - name: Ensure Gradle wrapper
-        shell: bash
         run: |
           if [ ! -f "./gradlew" ]; then
             curl -s https://get.sdkman.io | bash
