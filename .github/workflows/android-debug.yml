@@ -19,38 +19,34 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Point Gradle to Android SDK
+      # نصب ابزار خط فرمان اندروید + پذیرش لایسنس + پکیج‌های لازم
+      - name: Install Android SDK & packages
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: latest
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
+
+      # به Gradle بگو SDK کجاست
+      - name: Create local.properties
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      - name: Accept licenses & install SDK packages if sdkmanager exists
+      # اگر gradlew در ریپو نبود، خودمان Wrapper می‌سازیم
+      - name: Ensure Gradle wrapper exists
         shell: bash
         run: |
-          set -e
-          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager"
-          fi
-          if [ -x "$SDKMANAGER" ]; then
-            yes | sudo "$SDKMANAGER" --licenses
-            sudo "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          else
-            echo "sdkmanager not found; will let Gradle download components."
-          fi
-
-      - name: Build (use wrapper if present; otherwise install Gradle)
-        shell: bash
-        run: |
-          set -e
-          if [ -f "./gradlew" ]; then
-            chmod +x ./gradlew
-            ./gradlew clean :app:assembleDebug
-          else
+          if [ ! -f "./gradlew" ]; then
             curl -s https://get.sdkman.io | bash
             source "$HOME/.sdkman/bin/sdkman-init.sh"
             sdk install gradle 8.7
             gradle wrapper --gradle-version 8.7
-            ./gradlew clean :app:assembleDebug
           fi
+          chmod +x ./gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew clean :app:assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
