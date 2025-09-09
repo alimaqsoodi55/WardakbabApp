@@ -1,4 +1,4 @@
-name: Android Debug APK
+name: Android Debug APK - Vue App
 on:
   workflow_dispatch:
   push:
@@ -7,46 +7,72 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    # بیلد داخل کانتینر با Android SDK آماده
-    container:
-      image: ghcr.io/cirruslabs/android-sdk:34
-      options: --user root
+    env:
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_HOME: /usr/local/lib/android/sdk
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install JDK 17
-        run: |
-          apt-get update
-          apt-get install -y openjdk-17-jdk unzip curl
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-          echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-      - name: Accept licenses & ensure SDK packages
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Vue app
+        run: npm run build
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # برای پروژه‌های Capacitor
+      - name: Install Capacitor Android platform
+        run: |
+          npx cap add android
+          npx cap sync
+
+      # برای پروژه‌های Cordova
+      # - name: Install Cordova Android platform
+      #   run: |
+      #     npm install -g cordova
+      #     cordova platform add android
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept licenses
         run: |
           yes | sdkmanager --licenses
+
+      - name: Install Android packages
+        run: |
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Create local.properties
-        run: echo "sdk.dir=${ANDROID_SDK_ROOT:-/opt/android-sdk}" > local.properties
-
-      - name: Ensure Gradle wrapper
+      # ساخت APK برای Capacitor
+      - name: Build Android APK (Capacitor)
         run: |
-          if [ ! -f "./gradlew" ]; then
-            curl -s https://get.sdkman.io | bash
-            source "$HOME/.sdkman/bin/sdkman-init.sh"
-            sdk install gradle 8.7
-            gradle wrapper --gradle-version 8.7
-          fi
-          chmod +x ./gradlew
+          cd android
+          ./gradlew --no-daemon assembleDebug
 
-      - name: Build Debug APK
-        run: ./gradlew --no-daemon clean :app:assembleDebug
+      # یا برای Cordova:
+      # - name: Build Android APK (Cordova)
+      #   run: |
+      #     cordova build android --debug
 
+      # آپلود APK - مسیرهای مختلف بر اساس نوع پروژه
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            # یا برای Cordova:
+            # platforms/android/app/build/outputs/apk/debug/app-debug.apk
