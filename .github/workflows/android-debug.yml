@@ -24,7 +24,7 @@ jobs:
       - name: Point Gradle to SDK
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      # اگر sdkmanager موجود نباشد، خودمان cmdline-tools را دانلود و نصب می‌کنیم
+      # اگر sdkmanager نباشه، cmdline-tools رو دانلود و نصب می‌کنیم
       - name: Ensure sdkmanager exists
         shell: bash
         run: |
@@ -39,7 +39,7 @@ jobs:
             mv cmdline-tools latest || true
           fi
 
-      # لایسنس‌ها و پکیج‌های لازم (platform-tools, platform 34, build-tools 34.0.0)
+      # پذیرش لایسنس‌ها و نصب پکیج‌ها
       - name: Accept licenses & install SDK packages
         shell: bash
         run: |
@@ -48,6 +48,7 @@ jobs:
           yes | "$SDKBIN" --licenses
           "$SDKBIN" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
+      # این بخش در عکسِ تو خالی مونده بود — باید دقیقاً همین‌ها باشد
       - name: Ensure Gradle wrapper
         shell: bash
         run: |
