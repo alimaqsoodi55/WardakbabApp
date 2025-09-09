@@ -8,7 +8,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # بیلد داخل کانتینر با SDK آماده
+    # بیلد داخل کانتینر با Android SDK آماده
     container:
       image: ghcr.io/cirruslabs/android-sdk:34
       options: --user root
@@ -30,7 +30,7 @@ jobs:
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Create local.properties
-        run: echo "sdk.dir=/sdk" > local.properties
+        run: echo "sdk.dir=${ANDROID_SDK_ROOT:-/opt/android-sdk}" > local.properties
 
       - name: Ensure Gradle wrapper
         run: |
