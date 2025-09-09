@@ -19,11 +19,28 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Accept Android SDK licenses
-        run: yes | sudo $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+      - name: Point Gradle to Android SDK
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      - name: Build (use wrapper if exists; otherwise install Gradle)
+      - name: Accept licenses & install SDK packages if sdkmanager exists
+        shell: bash
         run: |
+          set -e
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager"
+          fi
+          if [ -x "$SDKMANAGER" ]; then
+            yes | sudo "$SDKMANAGER" --licenses
+            sudo "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          else
+            echo "sdkmanager not found; will let Gradle download components."
+          fi
+
+      - name: Build (use wrapper if present; otherwise install Gradle)
+        shell: bash
+        run: |
+          set -e
           if [ -f "./gradlew" ]; then
             chmod +x ./gradlew
             ./gradlew clean :app:assembleDebug
@@ -31,8 +48,8 @@ jobs:
             curl -s https://get.sdkman.io | bash
             source "$HOME/.sdkman/bin/sdkman-init.sh"
             sdk install gradle 8.7
-            gradle -v
-            gradle clean :app:assembleDebug
+            gradle wrapper --gradle-version 8.7
+            ./gradlew clean :app:assembleDebug
           fi
 
       - name: Upload APK
