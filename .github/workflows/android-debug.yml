@@ -8,18 +8,45 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-    steps:
-      - uses: actions/checkout@v4
+      ANDROID_HOME: /usr/local/lib/android/sdk
 
-      - uses: actions/setup-java@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
       - name: Point Gradle to SDK
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+      # اگر sdkmanager موجود نباشد، خودمان cmdline-tools را دانلود و نصب می‌کنیم
+      - name: Ensure sdkmanager exists
+        shell: bash
+        run: |
+          set -e
+          SDKBIN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKBIN" ]; then
+            mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+            cd "$ANDROID_SDK_ROOT/cmdline-tools"
+            curl -s -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            unzip -q -o cmdline-tools.zip
+            rm cmdline-tools.zip
+            mv cmdline-tools latest || true
+          fi
+
+      # لایسنس‌ها و پکیج‌های لازم (platform-tools, platform 34, build-tools 34.0.0)
+      - name: Accept licenses & install SDK packages
+        shell: bash
+        run: |
+          set -e
+          SDKBIN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKBIN" --licenses
+          "$SDKBIN" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Ensure Gradle wrapper
         shell: bash
