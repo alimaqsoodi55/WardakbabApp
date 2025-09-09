@@ -1,0 +1,47 @@
+name: Android Debug APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/cirruslabs/android-sdk:34
+      options: --user root
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install JDK 17
+        run: |
+          apt-get update
+          apt-get install -y openjdk-17-jdk unzip curl
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Accept licenses & ensure SDK packages
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Create local.properties
+        run: echo "sdk.dir=/sdk" > local.properties
+
+      - name: Ensure Gradle wrapper
+        run: |
+          if [ ! -f "./gradlew" ]; then
+            curl -s https://get.sdkman.io | bash
+            source "$HOME/.sdkman/bin/sdkman-init.sh"
+            sdk install gradle 8.7
+            gradle wrapper --gradle-version 8.7
+          fi
+          chmod +x ./gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew --no-daemon clean :app:assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
